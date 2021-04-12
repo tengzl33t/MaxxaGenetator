@@ -1,111 +1,83 @@
-"""Maxa text generator."""
+import discord
+import os
 import random
-import sys
-
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QPushButton, QCheckBox, QLineEdit
 
 
-class ResultWindow(QMainWindow):
+class MaxxaGen:
+    def __init__(self, all_phrs, line_phrs, captlz):
+        self.all_phrs = all_phrs
+        self.line_phrs = line_phrs
+        self.captlz = captlz
 
-    def __init__(self):
-        super().__init__()
+    def read_from_file(self):
+        """Read file with phrases."""
+        phrases = []
+        with open("phrases.txt", encoding="utf-8") as file:
+            for line in file:
+                phrases.append(line.strip())
 
-        self.title = "Result"
-        self.top = 100
-        self.left = 100
-        self.width = 1000
-        self.height = 500
-        self.setWindowTitle(self.title)
-        self.setGeometry(self.top, self.left, self.width, self.height)
+        return phrases
 
-        self.text_out = QLabel(self)
-        self.text_out.move(10, 10)
-        self.text_out.setStyleSheet("background-color: white")
+    def get_random_from_list(self):
+        """IDK why i need this."""
+        return random.choice(self.read_from_file())
 
+    def __str__(self):
+        """Make text from phrases."""
+        res_str = ""
+        counter = 0
+        line_counter = 0
+        while self.all_phrs != counter:
+            counter += 1
 
-class FirstWindow(QMainWindow):
+            if self.line_phrs == line_counter:
+                res_str += "\n" + (self.get_random_from_list().capitalize(
+                ) if self.captlz else self.get_random_from_list()) + " "
+                line_counter = 1
+            else:
+                res_str += (self.get_random_from_list().capitalize()
+                            if len(res_str) == 0 and self.captlz else
+                            self.get_random_from_list()) + " "
+                line_counter += 1
 
-    def __init__(self):
-        super().__init__()
-
-        self.show_result = None
-
-        self.title = "MaxxaGenetator 0.9"
-        self.top = 100
-        self.left = 100
-        self.width = 400
-        self.height = 200
-
-        self.button = QPushButton("Start", self)
-        self.button.move(10, 100)
-        self.button.clicked.connect(self.go)
-
-        self.all_phrases_label = QLabel("All Phrases count:", self)
-        self.all_phrases_label.move(10, 10)
-        self.all_phrases = QLineEdit(self)
-        self.all_phrases.move(100, 10)
-        self.all_phrases.resize(50, 25)
-
-        self.line_phrases_label = QLabel("Line Phrases count:", self)
-        self.line_phrases_label.move(10, 40)
-        self.line_phrases = QLineEdit(self)
-        self.line_phrases.move(110, 40)
-        self.line_phrases.resize(50, 25)
-
-        self.cap = QCheckBox("Capitalize first letters?", self)
-        self.cap.move(10, 70)
-        self.cap.resize(200, 25)
-
-        self.setWindowTitle(self.title)
-        self.setGeometry(self.top, self.left, self.width, self.height)
-        self.show()
-
-    def go(self):
-        text = union_random(int(self.all_phrases.text()), int(self.line_phrases.text()), self.cap.isChecked())
-
-        self.show_result = ResultWindow()
-        self.show_result.text_out.setText(text)
-        self.show_result.text_out.adjustSize()
-        self.show_result.text_out.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.show_result.show()
+        return res_str
 
 
-def read_from_file() -> list:
-    """Read file with phrases."""
-    phrases = []
-    with open("phrases.txt", encoding="utf-8") as file:
-        for line in file:
-            phrases.append(line.strip())
-
-    return phrases
+client = discord.Client()
 
 
-def get_random_from_list():
-    """IDK why i need this."""
-    return random.choice(read_from_file())
+@client.event
+async def on_ready():
+    print("We have logged in as {0.user}".format(client))
 
 
-def union_random(all_count, line_count, capitalize):
-    """Make text from phrases."""
-    res_str = ""
-    counter = 0
-    line_counter = 0
-    while counter != all_count:
-        counter += 1
+@client.event
+async def on_message(message):
+    if message.author == client.user:
+        return
 
-        if line_counter == line_count:
-            res_str += "\n" + (get_random_from_list().capitalize() if capitalize else get_random_from_list()) + " "
-            line_counter = 1
-        else:
-            res_str += (get_random_from_list().capitalize() if len(
-                res_str) == 0 and capitalize else get_random_from_list()) + " "
-            line_counter += 1
+    if message.content.startswith('$help'):
+        await message.channel.send(
+            "```Данный бот был создан для сохранения удаленных сообщений Махмуда, чтобы была видна структура переписки. Сторонние боты не позволяли этого делать, ибо под Махамада Ибрагиомва требуется опредленная настройка, зная встроенный в его мозг скрипт.\n\nКоманды:\n$hello - приветствие\n$generate - рандомная фраза из лексикона махмуда (добавится в бета версии)```"
+        )
 
-    return res_str
+    if message.content.startswith('$hello'):
+        await message.channel.send("йоу бандишка братишка")
+
+    if message.author.id == 373115287828037632:
+        await message.channel.send(f"```{message.content}```")
+
+    if message.content.startswith('$generate'):
+        await message.channel.send(MaxxaGen(5, 5, True))
+
+    if message.author.id == 373115287828037632:
+        if "пойоукай" in message.content:
+            await message.channel.send(
+                "йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу йоу"
+            )
+    """
+  чс - автокик/автобан
+  """
 
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    mainWindow = FirstWindow()
-    sys.exit(app.exec())
+client.run(os.getenv('TOKEN'))
