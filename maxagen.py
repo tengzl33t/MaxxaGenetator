@@ -72,16 +72,16 @@ class MaxxaGen:
 
 
 settings_gen = {
-    "all_phrases": 50,
-    "line_phrases": 2,
+    "all_phrases": 5,
+    "line_phrases": 5,
     "capitalize": True,
     "allow_repeats": True,
     "file": "phrases.txt",
 }
 
 settings_forgiveness = {
-    "all_phrases": 50,
-    "line_phrases": 2,
+    "all_phrases": 5,
+    "line_phrases": 5,
     "capitalize": True,
     "allow_repeats": True,
     "file": "forgiveness_phrases.txt",
@@ -98,6 +98,8 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
+    # list of bot commands
+    commands = ['$help', '/ген', '$gen', '/йоу', '$hi', '/прощение', '$sry']
     # ignore bot messages
     if message.author == client.user:
         return
@@ -106,37 +108,32 @@ async def on_message(message):
     with open("help.txt", "r") as file:
         data = file.read()
 
-    # help command
-    if message.content.startswith('$help'):
-        await message.channel.send(f"```{data}```")
-
-    # $hi command
-    if message.content.startswith('/йоу') or message.content.startswith('$hi'):
-        await message.channel.send("йоу бандишка братишка")
-
-    # mahammad20 messages duplicator 
+    # mahammad20 messages duplicator
     if message.author.id == 373115287828037632:
         await message.channel.send(f"```{message.content}```")
 
+    # checks if dolboeb maha writes command without mistakes
+    if message.author.id == 373115287828037632 and message.content.startswith(tuple(commands)) and " " in message.content:
+        await message.channel.send("Махмуд пошёл нахуй, читай команды долбаёб")
+    # if maha asks somebody say "jo", bot will print "jo" 60 times in 1 msg
+    elif message.author.id == 373115287828037632 and 'пойоукай' in message.content:
+      await message.channel.send('йоу ' * 60)
     # $gen command
-    if message.content.startswith('/ген') or message.content.startswith('$gen'):
+    elif message.content == '/ген' or message.content == '$gen':
         await message.channel.send(MaxxaGen(settings_gen))
-
-    if message.content.startswith('/прощение') or message.content.startswith('$sry'):
+    # $sry command
+    elif message.content.startswith('/прощение') or message.content.startswith('$sry'):
         await message.channel.send(MaxxaGen(settings_forgiveness))
-
-    if message.author.id == 373115287828037632:
-        if "пойоукай" in message.content:
-            await message.channel.send("йоу " * 60)
-
-    """if message.content.startswith('$kazantip') or message.content.startswith('/казантип'):
-        await message.channel.send("/play song:https://www.youtube.com/watch?v=O8W6TSwABak")
-
-    if message.content.startswith('$dnb') or message.content.startswith('/днб'):
-        await message.channel.send("/play input:https://youtu.be/_FWirIjoCAQ")"""
-
-  #чс - автокик/автобан
+    # $help command
+    elif message.content.startswith('$help'):
+        await message.channel.send(f"```{data}```")
+    # $hi command
+    elif message.content.startswith('/йоу') or message.content.startswith('$hi'):
+        await message.channel.send("йоу бандишка братишка") # добавить файл с разными приветствиями и принтить рандомное
+    # skips written command /play (Rhytm bot) by maha
+    elif message.author.id == 373115287828037632 and '/play' in message.content:
+        pass
 
 
 
-client.run('TOKEN')
+client.run('ODMxMDcyOTkwMzc1OTY4NzY5.YHP7CQ.l2KQwWSyEicZTshN14JQKmHrzLA')
