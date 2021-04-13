@@ -2,34 +2,90 @@ import discord
 import os
 import random
 
-
 class MaxxaGen:
-    def __init__(self, all_phrs, line_phrs, captlz, file):
-        self.all_phrs = all_phrs
-        self.line_phrs = line_phrs
-        self.captlz = captlz
-        self.file = file
+    def __init__(self, settings):
+        self.all_phrs = settings["all_phrases"]
+        self.line_phrs = settings["line_phrases"]
+        self.captlz = settings["capitalize"]
+        self.allow_repeats = settings["allow_repeats"]
+        self.file = settings["file"]
+        self.phrases = self.read_from_file()
 
     def read_from_file(self):
         """Read file with phrases."""
-        phrases = []
+        phrases = {}
+        counter = 0
         with open(self.file, encoding="utf-8") as file:
             for line in file:
-                phrases.append(line.strip())
-
+                phrases[counter] = line.strip()
+                counter += 1
         return phrases
 
-    def get_random_from_list(self):
+    def get_random(self, delete):
         """IDK why i need this."""
-        B = sorted(self.read_from_file(), key=lambda A: random.random())
-        return B[:self.all_phrs]
+        try:
+            result = random.choice(list(self.phrases.items()))
+            if delete:
+                self.phrases.pop(result[0])
+            return result[1]
+        except IndexError:
+            pass
+
+    def union(self):
+        """Make text from phrases."""
+        lines = {}
+        counter = 0
+        line = 0
+        line_counter = 0
+        while counter != self.all_phrs:
+            counter += 1
+
+            phrase = self.get_random(False) if self.allow_repeats else self.get_random(True)
+
+            if phrase:
+                if line_counter == self.line_phrs:
+                    # when line is full, creates new line
+                    line += 1
+                    lines[line] = phrase
+                    line_counter = 1
+                else:
+                    # first line and when it isn't full
+                    if line in lines:
+                        current_val = lines.get(line)
+                        lines[line] = f"{current_val} {phrase}"
+                    else:
+                        lines[line] = phrase
+
+                    line_counter += 1
+
+        return lines
 
     def __str__(self):
-        """Make text from phrases."""
+        res_dict = self.union()
         res_str = ""
-        for i in self.get_random_from_list():
-            res_str += i + " "
-        return res_str.capitalize()
+        for val in res_dict.values():
+            if res_str:
+                res_str += "\n"
+            res_str += val.capitalize() if self.captlz else val
+
+        return res_str
+
+
+settings_gen = {
+    "all_phrases": 50,
+    "line_phrases": 2,
+    "capitalize": True,
+    "allow_repeats": True,
+    "file": "phrases.txt",
+}
+
+settings_forgiveness = {
+    "all_phrases": 50,
+    "line_phrases": 2,
+    "capitalize": True,
+    "allow_repeats": True,
+    "file": "forgiveness_phrases.txt",
+}
 
 
 client = discord.Client()
@@ -64,10 +120,10 @@ async def on_message(message):
 
     # $gen command
     if message.content.startswith('/ген') or message.content.startswith('$gen'):
-        await message.channel.send(MaxxaGen(5, 5, True, 'phrases.txt'))
+        await message.channel.send(MaxxaGen(settings_gen))
 
     if message.content.startswith('/прощение') or message.content.startswith('$sry'):
-        await message.channel.send(MaxxaGen(5, 5, True, 'forgiveness_phrases.txt'))
+        await message.channel.send(MaxxaGen(settings_forgiveness))
 
     if message.author.id == 373115287828037632:
         if "пойоукай" in message.content:
