@@ -83,16 +83,30 @@ async def on_ready():
 @client.event
 async def on_message(message):
     # list of bot commands
-    commands = ['$help', '/ген', '$gen', '/йоу', '$hi', '/прощение', '$sry']
     sorry_commands = ["прощение", "sry", "sorry"]
     gen_commands = ["gen", "ген"]
     help_commands = ["help", "помощь", "помогите"]
     hello_commands = ["привет", "здарова", "hello", "йоу"]
 
-    all_cmds = commands + sorry_commands + gen_commands + help_commands + hello_commands
+    all_cmds = sorry_commands + gen_commands + help_commands + hello_commands
 
     msg_content_splitted = message.content.lower().split(",")
     msg_content = msg_content_splitted[0]
+
+    # parameters
+    mute_maxxa = True
+    cmd_prefix = "$"
+
+    help = f"Данный бот был создан для сохранения удаленных сообщений Махмуда, чтобы была видна структура переписки." \
+           f"\nСторонние боты не позволяли этого делать, ибо под Махамада Ибрагиомва требуется " \
+           f"опредленная настройка, зная встроенный в его мозг скрипт.\n" \
+           f"Команды: (префикс: {cmd_prefix})" \
+           f"\n{hello_commands} - приветствие\n{gen_commands} - рандомная фраза из лексикона махмуда\n" \
+           f"{sorry_commands} - извинение от ИИ махи\n"\
+           f"\nГенератор имеет настройки, которые устанавливаются через запятую, параметры: [кол-во фраз всего (int),"\
+           f" кол-во фраз в строке (int), заглавные буквы (bool), разрешение повторений (bool)]"\
+           f"\nНапример: {cmd_prefix}gen,5,5,t,t"
+
     # ebatj ja bidlo ebanoe
     try:
         all_count = int(msg_content_splitted[1])
@@ -122,23 +136,20 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    # help.txt reading to string
-    with open("help.txt", "r", encoding="utf8") as file:
-        data = file.read()
-
     # mahammad20 messages duplicator
     if message.author.id == 373115287828037632:
+        if mute_maxxa:
+            await message.delete()
         await message.channel.send(f"```{message.content}```")
     # if message.author.id == 373115287828037632:
     #     await message.channel.send(f"```{message.content}```")
-    if msg_content.startswith('/') and any(ele in msg_content for ele in all_cmds):
+    if msg_content.startswith(cmd_prefix) and any(ele in msg_content for ele in all_cmds):
         # delete command message
-        if msg_content.startswith('/?'):
+        if msg_content.startswith(f"{cmd_prefix}?"):
             await message.delete()
 
         # checks if dolboeb maha writes command without mistakes
-        if message.author.id == 373115287828037632 and message.content.startswith(
-                tuple(commands)) and " " in message.content:
+        if message.author.id == 373115287828037632 and message.content.startswith(all_cmds) and " " in message.content:
             await message.channel.send("Махмуд пошёл нахуй, читай команды долбаёб")
         # if maha asks somebody say "jo", bot will print "jo" 60 times in 1 msg
         elif message.author.id == 373115287828037632 and 'пойоукай' in message.content:
@@ -153,7 +164,7 @@ async def on_message(message):
             await message.channel.send(MaxxaGen(settings, "forgiveness_phrases.txt"))
         # $help command
         elif any(ele in msg_content for ele in help_commands):
-            await message.channel.send(f"```{data}```")
+            await message.channel.send(f"```{help}```")
         # $hi command
         elif any(ele in msg_content for ele in hello_commands):
             await message.channel.send(MaxxaGen(settings, "hello.txt"))
@@ -162,4 +173,4 @@ async def on_message(message):
             pass
 
 
-client.run('ODMxNjQ3OTAyNjkzOTgyMjI4.YHYSdw.QT7y3IEI-tHuXdjeg32e0AqUEGo')
+client.run('token')
