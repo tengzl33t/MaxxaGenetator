@@ -1,111 +1,176 @@
-"""Maxa text generator."""
+import discord
+from distutils.util import strtobool
 import random
-import sys
-
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QPushButton, QCheckBox, QLineEdit
 
 
-class ResultWindow(QMainWindow):
+class MaxxaGen:
+    def __init__(self, settings, file):
+        self.all_phrs = settings["all_phrases"]
+        self.line_phrs = settings["line_phrases"]
+        self.captlz = settings["capitalize"]
+        self.allow_repeats = settings["allow_repeats"]
+        self.file = file
+        self.phrases = self.read_from_file()
 
-    def __init__(self):
-        super().__init__()
+    def read_from_file(self):
+        """Read file with phrases."""
+        phrases = {}
+        counter = 0
+        with open(self.file, encoding="utf-8") as file:
+            for line in file:
+                phrases[counter] = line.strip()
+                counter += 1
+        return phrases
 
-        self.title = "Result"
-        self.top = 100
-        self.left = 100
-        self.width = 1000
-        self.height = 500
-        self.setWindowTitle(self.title)
-        self.setGeometry(self.top, self.left, self.width, self.height)
+    def get_random(self, delete):
+        """IDK why i need this."""
+        try:
+            result = random.choice(list(self.phrases.items()))
+            if delete:
+                self.phrases.pop(result[0])
+            return result[1]
+        except IndexError:
+            pass
 
-        self.text_out = QLabel(self)
-        self.text_out.move(10, 10)
-        self.text_out.setStyleSheet("background-color: white")
+    def union(self):
+        """Make text from phrases."""
+        lines = {}
+        counter = 0
+        line = 0
+        line_counter = 0
+        while counter != self.all_phrs:
+            counter += 1
 
+            phrase = self.get_random(False) if self.allow_repeats else self.get_random(True)
 
-class FirstWindow(QMainWindow):
+            if phrase:
+                if line_counter == self.line_phrs:
+                    # when line is full, creates new line
+                    line += 1
+                    lines[line] = phrase
+                    line_counter = 1
+                else:
+                    # first line and when it isn't full
+                    if line in lines:
+                        current_val = lines.get(line)
+                        lines[line] = f"{current_val} {phrase}"
+                    else:
+                        lines[line] = phrase
 
-    def __init__(self):
-        super().__init__()
+                    line_counter += 1
 
-        self.show_result = None
+        return lines
 
-        self.title = "MaxxaGenetator 0.9"
-        self.top = 100
-        self.left = 100
-        self.width = 400
-        self.height = 200
+    def __str__(self):
+        res_dict = self.union()
+        res_str = ""
+        for val in res_dict.values():
+            if res_str:
+                res_str += "\n"
+            res_str += val.capitalize() if self.captlz else val
 
-        self.button = QPushButton("Start", self)
-        self.button.move(10, 100)
-        self.button.clicked.connect(self.go)
-
-        self.all_phrases_label = QLabel("All Phrases count:", self)
-        self.all_phrases_label.move(10, 10)
-        self.all_phrases = QLineEdit(self)
-        self.all_phrases.move(100, 10)
-        self.all_phrases.resize(50, 25)
-
-        self.line_phrases_label = QLabel("Line Phrases count:", self)
-        self.line_phrases_label.move(10, 40)
-        self.line_phrases = QLineEdit(self)
-        self.line_phrases.move(110, 40)
-        self.line_phrases.resize(50, 25)
-
-        self.cap = QCheckBox("Capitalize first letters?", self)
-        self.cap.move(10, 70)
-        self.cap.resize(200, 25)
-
-        self.setWindowTitle(self.title)
-        self.setGeometry(self.top, self.left, self.width, self.height)
-        self.show()
-
-    def go(self):
-        text = union_random(int(self.all_phrases.text()), int(self.line_phrases.text()), self.cap.isChecked())
-
-        self.show_result = ResultWindow()
-        self.show_result.text_out.setText(text)
-        self.show_result.text_out.adjustSize()
-        self.show_result.text_out.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.show_result.show()
-
-
-def read_from_file() -> list:
-    """Read file with phrases."""
-    phrases = []
-    with open("phrases.txt", encoding="utf-8") as file:
-        for line in file:
-            phrases.append(line.strip())
-
-    return phrases
+        return res_str
 
 
-def get_random_from_list():
-    """IDK why i need this."""
-    return random.choice(read_from_file())
+client = discord.Client()
 
 
-def union_random(all_count, line_count, capitalize):
-    """Make text from phrases."""
-    res_str = ""
-    counter = 0
-    line_counter = 0
-    while counter != all_count:
-        counter += 1
-
-        if line_counter == line_count:
-            res_str += "\n" + (get_random_from_list().capitalize() if capitalize else get_random_from_list()) + " "
-            line_counter = 1
-        else:
-            res_str += (get_random_from_list().capitalize() if len(
-                res_str) == 0 and capitalize else get_random_from_list()) + " "
-            line_counter += 1
-
-    return res_str
+@client.event
+async def on_ready():
+    print("We have logged in as {0.user}".format(client))
 
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    mainWindow = FirstWindow()
-    sys.exit(app.exec())
+@client.event
+async def on_message(message):
+    # list of bot commands
+    sorry_commands = ["прощение", "sry", "sorry"]
+    gen_commands = ["gen", "ген"]
+    help_commands = ["help", "помощь", "помогите"]
+    hello_commands = ["привет", "здарова", "hello", "йоу"]
+
+    all_cmds = sorry_commands + gen_commands + help_commands + hello_commands
+
+    msg_content_splitted = message.content.lower().split(",")
+    msg_content = msg_content_splitted[0]
+
+    # parameters
+    mute_maxxa = True
+    cmd_prefix = "$"
+
+    help = f"Данный бот был создан для сохранения удаленных сообщений Махмуда, чтобы была видна структура переписки." \
+           f"\nСторонние боты не позволяли этого делать, ибо под Махамада Ибрагиомва требуется " \
+           f"опредленная настройка, зная встроенный в его мозг скрипт.\n" \
+           f"Команды: (префикс: {cmd_prefix})" \
+           f"\n{hello_commands} - приветствие\n{gen_commands} - рандомная фраза из лексикона махмуда\n" \
+           f"{sorry_commands} - извинение от ИИ махи\n"\
+           f"\nГенератор имеет настройки, которые устанавливаются через запятую, параметры: [кол-во фраз всего (int),"\
+           f" кол-во фраз в строке (int), заглавные буквы (bool), разрешение повторений (bool)]"\
+           f"\nНапример: {cmd_prefix}gen,5,5,t,t"
+
+    # ebatj ja bidlo ebanoe
+    try:
+        all_count = int(msg_content_splitted[1])
+    except Exception:
+        all_count = 5
+    try:
+        line_count = int(msg_content_splitted[2])
+    except Exception:
+        line_count = 5
+    try:
+        cap = strtobool(msg_content_splitted[3])
+    except Exception:
+        cap = True
+    try:
+        rep = strtobool(msg_content_splitted[4])
+    except Exception:
+        rep = False
+
+    settings = {
+        "all_phrases": all_count,
+        "line_phrases": line_count,
+        "capitalize": cap,
+        "allow_repeats": rep
+    }
+
+    # ignore bot messages
+    if message.author == client.user:
+        return
+
+    # mahammad20 messages duplicator
+    if message.author.id == 373115287828037632:
+        if mute_maxxa:
+            await message.delete()
+        await message.channel.send(f"```{message.content}```")
+    # if message.author.id == 373115287828037632:
+    #     await message.channel.send(f"```{message.content}```")
+    if msg_content.startswith(cmd_prefix) and any(ele in msg_content for ele in all_cmds):
+        # delete command message
+        if msg_content.startswith(f"{cmd_prefix}?"):
+            await message.delete()
+
+        # checks if dolboeb maha writes command without mistakes
+        if message.author.id == 373115287828037632 and message.content.startswith(all_cmds) and " " in message.content:
+            await message.channel.send("Махмуд пошёл нахуй, читай команды долбаёб")
+        # if maha asks somebody say "jo", bot will print "jo" 60 times in 1 msg
+        elif message.author.id == 373115287828037632 and 'пойоукай' in message.content:
+            await message.channel.send('йоу ' * 60)
+        # $gen command
+        elif any(ele in msg_content for ele in gen_commands):
+            # print(settings_gen)
+            # print(MaxxaGen(settings_gen))
+            await message.channel.send(MaxxaGen(settings, "phrases.txt"))
+        # $sry command
+        elif any(ele in msg_content for ele in sorry_commands):
+            await message.channel.send(MaxxaGen(settings, "forgiveness_phrases.txt"))
+        # $help command
+        elif any(ele in msg_content for ele in help_commands):
+            await message.channel.send(f"```{help}```")
+        # $hi command
+        elif any(ele in msg_content for ele in hello_commands):
+            await message.channel.send(MaxxaGen(settings, "hello.txt"))
+        # skips written command /play (Rhytm bot) by maha
+        elif message.author.id == 373115287828037632 and '/play' in message.content:
+            pass
+
+
+client.run('token')
