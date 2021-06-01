@@ -84,12 +84,32 @@ class Phrases:
 
     def add_phrase(self, phrase):
         if not self.check_exists(phrase):
-            with open(self.phrases_file, "a") as file: file.write(f"\n{phrase}")
+            #TODO: проверку первой строки
+            with open(self.phrases_file, "a", encoding="utf-8") as file: file.write(f"\n{phrase}")
+            return f"Phrase {phrase} added."
+        else:
+            return "Phrase already exists!"
 
     def get_phrases(self):
         with open(self.phrases_file, "r", encoding="utf-8") as file:
             content = file.read().splitlines()
         return content
+
+    def del_phrase(self, phrase):
+        if self.check_exists(phrase):
+            with open(self.phrases_file, "r+", encoding="utf-8") as file:
+                edited_list = []
+                for index, line in enumerate(file):
+                    print(index)
+                    if line.strip() != phrase:
+                        edited_list.append(line.strip()) if len(edited_list) == 0 else edited_list.append(f"\n{line.strip()}")
+                file.seek(0)
+                for el in edited_list:
+                    file.write(el)
+                file.truncate()
+                return f"Phrase {phrase} deleted."
+        else:
+            return "Phrase not found!"
 
 class MaxxaGen:
     def __init__(self, settings, file):
@@ -168,6 +188,8 @@ async def on_ready():
     print("We have logged in as {0.user}".format(client))
 
 
+
+
 @client.event
 async def on_message(message):
 
@@ -176,6 +198,7 @@ async def on_message(message):
             return
         return
 
+## ---------- move  to funks ------------
     # list of bot commands
     sorry_commands = ["прощение", "sry", "sorry"]
     gen_commands = ["gen", "ген"]
@@ -183,14 +206,18 @@ async def on_message(message):
     hello_commands = ["привет", "здарова", "hello", "йоу"]
     sh_conf = ["shconf", "showconfig"]
     write_conf = ["wrconf", "writeconfig"]
+    del_phr = ["delphrs", "delphr", "deletephrase"]
+    add_phr = ["addphr", "addphrs", "addphrase"]
 
-    all_cmds = sorry_commands + gen_commands + help_commands + hello_commands + sh_conf + write_conf
+    all_cmds = sorry_commands + gen_commands + help_commands + hello_commands + sh_conf + write_conf + del_phr + add_phr
     gen_cmds = gen_commands + hello_commands + sorry_commands
-    parameters_cmds = write_conf + gen_cmds
+    parameters_cmds = write_conf + gen_cmds + del_phr + add_phr
 
     msg_content_splitted = message.content.lower().split(",", 1)
     prefix_part = msg_content_splitted[0][0]
     users_part = []
+
+    ## ----------------------
 
     if msg_content_splitted[0][1] == "?":
         silent = True
@@ -292,6 +319,32 @@ async def on_message(message):
                     s.write_config(new_config)
                     await message.channel.send(f"{previous_config} -> {s.read_config()}")
 
+            elif command_part in del_phr:
+                phr_file_type = arguments_part[0]
+
+                if phr_file_type == "h":
+                    phr_file = "hello.txt"
+                elif phr_file_type == "s":
+                    phr_file = "forgiveness_phrases.txt"
+                elif phr_file_type == "p":
+                    phr_file = "phrases.txt"
+
+                phr = Phrases(phr_file)
+                await message.channel.send(phr.del_phrase(arguments_part[1]))
+
+            elif command_part in add_phr:
+                phr_file_type = arguments_part[0]
+
+                if phr_file_type == "h":
+                    phr_file = "hello.txt"
+                elif phr_file_type == "s":
+                    phr_file = "forgiveness_phrases.txt"
+                elif phr_file_type == "p":
+                    phr_file = "phrases.txt"
+
+                phr = Phrases(phr_file)
+                await message.channel.send(phr.add_phrase(arguments_part[1]))
+
         # delete command message
         if silent:
             await message.delete()
@@ -307,7 +360,8 @@ async def on_message(message):
         elif str(message.author.id) in loaded_conf[-1] and '/play' in message.content:
             pass
         elif any(ele in command_part for ele in sh_conf):
-            await message.channel.send(loaded_conf)
+            msg = f"(Prefix, All Phrases, Line Phrases, Capitalize, Allow Repeats, Users Mute, Users IDs)\n{loaded_conf}"
+            await message.channel.send(msg)
 
 if __name__ == '__main__':
-    client.run('ODMxNjQ3OTAyNjkzOTgyMjI4.YHYSdw.uyYpwtdNK_yD77GMFw9MVH8V0Po')
+    client.run('ODMxNjQ3OTAyNjkzOTgyMjI4.YHYSdw.K2pS-9wyBUw6FG9WodTr9tS5o2k')
