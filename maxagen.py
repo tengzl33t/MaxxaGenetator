@@ -239,19 +239,7 @@ async def on_message(message):
     msg_content_splitted = message.content.lower().split(",", 1)
     prefix_part = msg_content_splitted[0][0]
 
-    if prefix_part is cmd_prefix:
-
-        help = f"Данный бот был создан для сохранения удаленных сообщений Махмуда, чтобы была видна структура переписки." \
-               f"\nСторонние боты не позволяли этого делать, ибо под Махамада Ибрагиомва требуется " \
-               f"опредленная настройка, зная встроенный в его мозг скрипт.\n" \
-               f"Команды: (префикс: {cmd_prefix})" \
-               f"\n{cmmn_cmds[3]} - приветствие\n{cmmn_cmds[1]} - рандомная фраза из лексикона махмуда\n" \
-               f"{cmmn_cmds[0]} - извинение от ИИ махи\n" \
-               f"\nГенератор имеет настройки, которые устанавливаются через запятую, параметры: [кол-во фраз всего (int)," \
-               f" кол-во фраз в строке (int), заглавные буквы (bool), разрешение повторений (bool)]" \
-               f"\nНапример: {cmd_prefix}gen,5,5,t,t"
-
-        users_part = []
+    if len(message.content) > 1:
 
         # Messages duplicator
 
@@ -259,19 +247,32 @@ async def on_message(message):
             if mute_users:
                 await message.delete()
             await message.channel.send(f"```{message.content}```")
+            
+        # "Maxxa messages"
 
-        if len(message.content) > 1:
+        if str(message.author.id) in loaded_conf[-1] and '/play' in message.content:
+            pass
 
-            # "Maxxa messages"
+        if str(message.author.id) in loaded_conf[-1] and 'пойоукай' in message.content:
+            await message.channel.send('йоу ' * 60)
 
-            if str(message.author.id) in loaded_conf[-1] and '/play' in message.content:
-                pass
+        if str(message.author.id) in loaded_conf[-1] and " " in message.content:
+            await message.channel.send("Махмуд пошёл нахуй, читай команды долбаёб")
+            
 
-            if str(message.author.id) in loaded_conf[-1] and 'пойоукай' in message.content:
-                await message.channel.send('йоу ' * 60)
+        if prefix_part is cmd_prefix:
+            
+            help = f"Данный бот был создан для сохранения удаленных сообщений Махмуда, чтобы была видна структура переписки." \
+            f"\nСторонние боты не позволяли этого делать, ибо под Махамада Ибрагиомва требуется " \
+            f"опредленная настройка, зная встроенный в его мозг скрипт.\n" \
+            f"Команды: (префикс: {cmd_prefix})" \
+            f"\n{cmmn_cmds[3]} - приветствие\n{cmmn_cmds[1]} - рандомная фраза из лексикона махмуда\n" \
+            f"{cmmn_cmds[0]} - извинение от ИИ махи\n" \
+            f"\nГенератор имеет настройки, которые устанавливаются через запятую, параметры: [кол-во фраз всего (int)," \
+            f" кол-во фраз в строке (int), заглавные буквы (bool), разрешение повторений (bool)]" \
+            f"\nНапример: {cmd_prefix}gen,5,5,t,t"
 
-            if str(message.author.id) in loaded_conf[-1] and " " in message.content:
-                await message.channel.send("Махмуд пошёл нахуй, читай команды долбаёб")
+            users_part = []
 
             # Getting parameters
 
@@ -294,7 +295,7 @@ async def on_message(message):
 
             # Debug
 
-            print(prefix_part, silent, command_part, arguments_part, users_part)
+            #print(prefix_part, silent, command_part, arguments_part, users_part)
 
             # Commands
 
