@@ -2,10 +2,7 @@ import discord
 from distutils.util import strtobool
 import random
 from configparser import ConfigParser
-import time
-
-# TODO: config file, save settings
-# TODO: Add phrases
+import os
 
 
 class Settings:
@@ -33,9 +30,8 @@ class Settings:
             self.conf.set(self.config_section, 'allow_repeats', str(self.def_allow_repeats))
             self.conf.set(self.config_section, 'user_mute', str(self.def_user_mute))
             self.conf.set(self.config_section, 'user_ids', str(self.def_user_ids))
-            with open(self.config_file, "w") as file: self.conf.write(file)
-        else:
-            print("Config file found, you can delete it for new configuration.")
+            with open(self.config_file, "w") as file:
+                self.conf.write(file)
 
     def read_config(self):
         self.initialize_file()
@@ -69,7 +65,9 @@ class Settings:
 
         print(args[0], args[0][0])
 
-        with open(self.config_file, "w") as file: self.conf.write(file)
+        with open(self.config_file, "w") as file:
+            self.conf.write(file)
+
 
 class Phrases:
     def __init__(self, phrases_file):
@@ -84,8 +82,11 @@ class Phrases:
 
     def add_phrase(self, phrase):
         if not self.check_exists(phrase):
-            #TODO: проверку первой строки
-            with open(self.phrases_file, "a", encoding="utf-8") as file: file.write(f"\n{phrase}")
+            with open(self.phrases_file, "a", encoding="utf-8") as file:
+                if os.path.getsize(self.phrases_file):
+                    file.write(f"\n{phrase}")
+                else:
+                    file.write(phrase)
             return f"Phrase {phrase} added."
         else:
             return "Phrase already exists!"
@@ -102,7 +103,8 @@ class Phrases:
                 for index, line in enumerate(file):
                     print(index)
                     if line.strip() != phrase:
-                        edited_list.append(line.strip()) if len(edited_list) == 0 else edited_list.append(f"\n{line.strip()}")
+                        edited_list.append(line.strip()) if len(edited_list) == 0 else edited_list.append(
+                            f"\n{line.strip()}")
                 file.seek(0)
                 for el in edited_list:
                     file.write(el)
@@ -110,6 +112,7 @@ class Phrases:
                 return f"Phrase {phrase} deleted."
         else:
             return "Phrase not found!"
+
 
 class MaxxaGen:
     def __init__(self, settings, file):
@@ -135,6 +138,7 @@ class MaxxaGen:
         try:
             result = random.choice(list(self.phrases.items()))
             if delete:
+                # TODO: Check this, maybe do something better
                 self.phrases.pop(result[0])
             return result[1]
         except IndexError:
@@ -188,180 +192,212 @@ async def on_ready():
     print("We have logged in as {0.user}".format(client))
 
 
+class Common:
+
+    def commands(self):
+        sorry_commands = ["прощение", "sry", "sorry"]
+        gen_commands = ["gen", "ген"]
+        help_commands = ["help", "помощь", "помогите"]
+        hello_commands = ["привет", "здарова", "hello", "йоу"]
+        sh_conf = ["shconf", "showconfig"]
+        write_conf = ["wrconf", "writeconfig"]
+        del_phr = ["delphrs", "delphr", "deletephrase"]
+        add_phr = ["addphr", "addphrs", "addphrase"]
+
+        return sorry_commands, gen_commands, help_commands, hello_commands, sh_conf, write_conf, del_phr, add_phr
+
+    def union_commands(self):
+        all_cmds = list(set().union(*self.commands()))
+        gen_cmds = self.commands()[0] + self.commands()[1] + self.commands()[3]
+        parameters_cmds = self.commands()[1] + self.commands()[5] + self.commands()[6] + self.commands()[7]
+
+        return all_cmds, gen_cmds, parameters_cmds
 
 
 @client.event
 async def on_message(message):
+    # Ignore useless messages
 
     if message.author == client.user:
         if message.author.bot:
             return
         return
 
-## ---------- move  to funks ------------
-    # list of bot commands
-    sorry_commands = ["прощение", "sry", "sorry"]
-    gen_commands = ["gen", "ген"]
-    help_commands = ["help", "помощь", "помогите"]
-    hello_commands = ["привет", "здарова", "hello", "йоу"]
-    sh_conf = ["shconf", "showconfig"]
-    write_conf = ["wrconf", "writeconfig"]
-    del_phr = ["delphrs", "delphr", "deletephrase"]
-    add_phr = ["addphr", "addphrs", "addphrase"]
+    # Getting commands
 
-    all_cmds = sorry_commands + gen_commands + help_commands + hello_commands + sh_conf + write_conf + del_phr + add_phr
-    gen_cmds = gen_commands + hello_commands + sorry_commands
-    parameters_cmds = write_conf + gen_cmds + del_phr + add_phr
+    cmmn = Common()
+    cmmn_cmds = cmmn.commands()
+    cmmn_cmds_union = cmmn.union_commands()
 
-    msg_content_splitted = message.content.lower().split(",", 1)
-    prefix_part = msg_content_splitted[0][0]
-    users_part = []
+    # Loading configuration from file
 
-    ## ----------------------
-
-    if msg_content_splitted[0][1] == "?":
-        silent = True
-        command_part = msg_content_splitted[0][2:]
-    else:
-        silent = False
-        command_part = msg_content_splitted[0][1:]
-
-    if len(msg_content_splitted) > 1:
-        arguments_part = msg_content_splitted[1].split(",", 6)
-        users_part = arguments_part[-1]
-    else:
-        arguments_part = False
-
-    print(prefix_part, silent, command_part, arguments_part, users_part)
-
-    # parameters
     s = Settings("config.ini")
     loaded_conf = s.read_config()
     mute_users = loaded_conf[-2]
     cmd_prefix = loaded_conf[0]
 
-    help = f"Данный бот был создан для сохранения удаленных сообщений Махмуда, чтобы была видна структура переписки." \
-           f"\nСторонние боты не позволяли этого делать, ибо под Махамада Ибрагиомва требуется " \
-           f"опредленная настройка, зная встроенный в его мозг скрипт.\n" \
-           f"Команды: (префикс: {cmd_prefix})" \
-           f"\n{hello_commands} - приветствие\n{gen_commands} - рандомная фраза из лексикона махмуда\n" \
-           f"{sorry_commands} - извинение от ИИ махи\n"\
-           f"\nГенератор имеет настройки, которые устанавливаются через запятую, параметры: [кол-во фраз всего (int),"\
-           f" кол-во фраз в строке (int), заглавные буквы (bool), разрешение повторений (bool)]"\
-           f"\nНапример: {cmd_prefix}gen,5,5,t,t"
+    msg_content_splitted = message.content.lower().split(",", 1)
+    prefix_part = msg_content_splitted[0][0]
 
-    # messages duplicator
-    if str(message.author.id) in loaded_conf[-1]:
-        if mute_users:
-            await message.delete()
-        await message.channel.send(f"```{message.content}```")
+    if prefix_part is cmd_prefix:
 
-    if prefix_part == cmd_prefix and any(ele in command_part for ele in all_cmds):
+        help = f"Данный бот был создан для сохранения удаленных сообщений Махмуда, чтобы была видна структура переписки." \
+               f"\nСторонние боты не позволяли этого делать, ибо под Махамада Ибрагиомва требуется " \
+               f"опредленная настройка, зная встроенный в его мозг скрипт.\n" \
+               f"Команды: (префикс: {cmd_prefix})" \
+               f"\n{cmmn_cmds[3]} - приветствие\n{cmmn_cmds[1]} - рандомная фраза из лексикона махмуда\n" \
+               f"{cmmn_cmds[0]} - извинение от ИИ махи\n" \
+               f"\nГенератор имеет настройки, которые устанавливаются через запятую, параметры: [кол-во фраз всего (int)," \
+               f" кол-во фраз в строке (int), заглавные буквы (bool), разрешение повторений (bool)]" \
+               f"\nНапример: {cmd_prefix}gen,5,5,t,t"
 
-        # arguments check
-        if command_part in parameters_cmds:
-            cmd_prefix = loaded_conf[0]
-            all_count = loaded_conf[1]
-            line_count = loaded_conf[2]
-            cap = loaded_conf[3]
-            rep = loaded_conf[4]
-            mute = loaded_conf[5]
-            users = loaded_conf[6]
+        users_part = []
 
-            if command_part in write_conf:
-                shift_pos = 1
+        # Messages duplicator
+
+        if str(message.author.id) in loaded_conf[-1]:
+            if mute_users:
+                await message.delete()
+            await message.channel.send(f"```{message.content}```")
+
+        if len(message.content) > 1:
+
+            # "Maxxa messages"
+
+            if str(message.author.id) in loaded_conf[-1] and '/play' in message.content:
+                pass
+
+            if str(message.author.id) in loaded_conf[-1] and 'пойоукай' in message.content:
+                await message.channel.send('йоу ' * 60)
+
+            if str(message.author.id) in loaded_conf[-1] and " " in message.content:
+                await message.channel.send("Махмуд пошёл нахуй, читай команды долбаёб")
+
+            # Getting parameters
+
+            if msg_content_splitted[0][1] == "?":
+                silent = True
+                command_part = msg_content_splitted[0][2:]
             else:
-                shift_pos = 0
+                silent = False
+                command_part = msg_content_splitted[0][1:]
 
-            if isinstance(arguments_part, list):
-                if len(arguments_part) >= 1 and arguments_part[0] and shift_pos:
-                    cmd_prefix = arguments_part[0]
+            if len(msg_content_splitted) > 1:
+                arguments_part = msg_content_splitted[1].split(",", 6)
+                users_part = arguments_part[-1]
+            else:
+                arguments_part = False
 
-                if len(arguments_part) >= 1+shift_pos and arguments_part[0+shift_pos]:
-                    all_count = arguments_part[0+shift_pos]
+            # delete command message
+            if silent:
+                await message.delete()
 
-                if len(arguments_part) >= 2+shift_pos and arguments_part[1+shift_pos]:
-                    line_count = arguments_part[1+shift_pos]
+            # Debug
 
-                if len(arguments_part) >= 3+shift_pos and arguments_part[2+shift_pos]:
-                    cap = strtobool(arguments_part[2+shift_pos])
+            print(prefix_part, silent, command_part, arguments_part, users_part)
 
-                if len(arguments_part) >= 4+shift_pos and arguments_part[3+shift_pos]:
-                    rep = strtobool(arguments_part[3+shift_pos])
+            # Commands
 
-                if len(arguments_part) >= 5+shift_pos and arguments_part[4+shift_pos]:
-                    mute = arguments_part[4+shift_pos]
+            if any(ele in command_part for ele in cmmn_cmds_union[0]):
 
-                if len(arguments_part) >= 6+shift_pos and arguments_part[5+shift_pos]:
-                    users = arguments_part[5+shift_pos]
+                # arguments check
+                if command_part in cmmn_cmds_union[2]:
+                    cmd_prefix = loaded_conf[0]
+                    all_count = loaded_conf[1]
+                    line_count = loaded_conf[2]
+                    cap = loaded_conf[3]
+                    rep = loaded_conf[4]
+                    mute = loaded_conf[5]
+                    users = loaded_conf[6]
 
-            if command_part in gen_cmds:
-                generator_settings = {
-                    "all_phrases": int(all_count),
-                    "line_phrases": int(line_count),
-                    "capitalize": cap,
-                    "allow_repeats": rep
-                }
+                    if command_part in cmmn_cmds[5]:
+                        shift_pos = 1
+                    else:
+                        shift_pos = 0
 
-                if any(ele in command_part for ele in hello_commands):
-                    await message.channel.send(MaxxaGen(generator_settings, "hello.txt"))
-                elif any(ele in command_part for ele in gen_commands):
-                    await message.channel.send(MaxxaGen(generator_settings, "phrases.txt"))
-                # $sry command
-                elif any(ele in command_part for ele in sorry_commands):
-                    await message.channel.send(MaxxaGen(generator_settings, "forgiveness_phrases.txt"))
+                    if isinstance(arguments_part, list):
+                        if len(arguments_part) >= 1 and arguments_part[0] and shift_pos:
+                            cmd_prefix = arguments_part[0]
 
-            elif command_part in write_conf:
-                new_config = [cmd_prefix, all_count, line_count, cap, rep, mute, users]
-                print(f"users: {users}")
-                if any(ele in command_part for ele in write_conf):
-                    previous_config = loaded_conf
-                    s.write_config(new_config)
-                    await message.channel.send(f"{previous_config} -> {s.read_config()}")
+                        if len(arguments_part) >= 1 + shift_pos and arguments_part[0 + shift_pos]:
+                            all_count = arguments_part[0 + shift_pos]
 
-            elif command_part in del_phr:
-                phr_file_type = arguments_part[0]
+                        if len(arguments_part) >= 2 + shift_pos and arguments_part[1 + shift_pos]:
+                            line_count = arguments_part[1 + shift_pos]
 
-                if phr_file_type == "h":
-                    phr_file = "hello.txt"
-                elif phr_file_type == "s":
-                    phr_file = "forgiveness_phrases.txt"
-                elif phr_file_type == "p":
-                    phr_file = "phrases.txt"
+                        if len(arguments_part) >= 3 + shift_pos and arguments_part[2 + shift_pos]:
+                            cap = strtobool(arguments_part[2 + shift_pos])
 
-                phr = Phrases(phr_file)
-                await message.channel.send(phr.del_phrase(arguments_part[1]))
+                        if len(arguments_part) >= 4 + shift_pos and arguments_part[3 + shift_pos]:
+                            rep = strtobool(arguments_part[3 + shift_pos])
 
-            elif command_part in add_phr:
-                phr_file_type = arguments_part[0]
+                        if len(arguments_part) >= 5 + shift_pos and arguments_part[4 + shift_pos]:
+                            mute = arguments_part[4 + shift_pos]
 
-                if phr_file_type == "h":
-                    phr_file = "hello.txt"
-                elif phr_file_type == "s":
-                    phr_file = "forgiveness_phrases.txt"
-                elif phr_file_type == "p":
-                    phr_file = "phrases.txt"
+                        if len(arguments_part) >= 6 + shift_pos and arguments_part[5 + shift_pos]:
+                            users = arguments_part[5 + shift_pos]
 
-                phr = Phrases(phr_file)
-                await message.channel.send(phr.add_phrase(arguments_part[1]))
+                    if command_part in cmmn_cmds[1]:
+                        generator_settings = {
+                            "all_phrases": int(all_count),
+                            "line_phrases": int(line_count),
+                            "capitalize": cap,
+                            "allow_repeats": rep
+                        }
 
-        # delete command message
-        if silent:
-            await message.delete()
+                        if any(ele in command_part for ele in cmmn_cmds[3]):
+                            await message.channel.send(MaxxaGen(generator_settings, "hello.txt"))
+                        elif any(ele in command_part for ele in cmmn_cmds[1]):
+                            await message.channel.send(MaxxaGen(generator_settings, "phrases.txt"))
+                        # $sry command
+                        elif any(ele in command_part for ele in cmmn_cmds[0]):
+                            await message.channel.send(MaxxaGen(generator_settings, "forgiveness_phrases.txt"))
 
-        # checks if dolboeb maha writes command without mistakes
-        if str(message.author.id) in loaded_conf[-1] and message.content.startswith(all_cmds) and " " in message.content:
-            await message.channel.send("Махмуд пошёл нахуй, читай команды долбаёб")
-        # if maha asks somebody say "jo", bot will print "jo" 60 times in 1 msg
-        elif str(message.author.id) in loaded_conf[-1] and 'пойоукай' in message.content:
-            await message.channel.send('йоу ' * 60)
-        elif any(ele in command_part for ele in help_commands):
-            await message.channel.send(f"```{help}```")
-        elif str(message.author.id) in loaded_conf[-1] and '/play' in message.content:
-            pass
-        elif any(ele in command_part for ele in sh_conf):
-            msg = f"(Prefix, All Phrases, Line Phrases, Capitalize, Allow Repeats, Users Mute, Users IDs)\n{loaded_conf}"
-            await message.channel.send(msg)
+                    elif command_part in cmmn_cmds[5]:
+                        new_config = [cmd_prefix, all_count, line_count, cap, rep, mute, users]
+                        print(f"users: {users}")
+                        if any(ele in command_part for ele in cmmn_cmds[5]):
+                            previous_config = loaded_conf
+                            s.write_config(new_config)
+                            await message.channel.send(f"{previous_config} -> {s.read_config()}")
+
+                    elif command_part in cmmn_cmds[6]:
+                        phr_file_type = arguments_part[0]
+
+                        if phr_file_type == "h":
+                            phr_file = "hello.txt"
+                        elif phr_file_type == "s":
+                            phr_file = "forgiveness_phrases.txt"
+                        elif phr_file_type == "p":
+                            phr_file = "phrases.txt"
+                        else:
+                            phr_file = ""
+
+                        phr = Phrases(phr_file)
+                        await message.channel.send(phr.del_phrase(arguments_part[1]))
+
+                    elif command_part in cmmn_cmds[7]:
+                        phr_file_type = arguments_part[0]
+
+                        if phr_file_type == "h":
+                            phr_file = "hello.txt"
+                        elif phr_file_type == "s":
+                            phr_file = "forgiveness_phrases.txt"
+                        elif phr_file_type == "p":
+                            phr_file = "phrases.txt"
+                        else:
+                            phr_file = ""
+
+                        phr = Phrases(phr_file)
+                        await message.channel.send(phr.add_phrase(arguments_part[1]))
+
+                elif any(ele in command_part for ele in cmmn_cmds[2]):
+                    await message.channel.send(f"```{help}```")
+
+                elif any(ele in command_part for ele in cmmn_cmds[4]):
+                    msg = f"(Prefix, All Phrases, Line Phrases, Capitalize, Allow Repeats, Users Mute, Users IDs)\n{loaded_conf}"
+                    await message.channel.send(msg)
+
 
 if __name__ == '__main__':
-    client.run('ODMxNjQ3OTAyNjkzOTgyMjI4.YHYSdw.K2pS-9wyBUw6FG9WodTr9tS5o2k')
+    client.run('ODMxNjQ3OTAyNjkzOTgyMjI4.YHYSdw.pGCzGAWLbMQcibcKEcIPARliK80')
