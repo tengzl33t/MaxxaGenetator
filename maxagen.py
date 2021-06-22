@@ -1,8 +1,9 @@
-import discord
-from distutils.util import strtobool
+import os
 import random
 from configparser import ConfigParser
-import os
+from distutils.util import strtobool
+
+import discord
 
 
 class Settings:
@@ -18,6 +19,7 @@ class Settings:
         self.def_capitalize = True
         self.def_allow_repeats = False
         self.def_user_mute = True
+        self.def_bot_token = 0
         self.def_user_ids = 373115287828037632
 
     def initialize_file(self):
@@ -29,6 +31,7 @@ class Settings:
             self.conf.set(self.config_section, 'capitalize', str(self.def_capitalize))
             self.conf.set(self.config_section, 'allow_repeats', str(self.def_allow_repeats))
             self.conf.set(self.config_section, 'user_mute', str(self.def_user_mute))
+            self.conf.set(self.config_section, 'bot_token', str(self.def_bot_token))
             self.conf.set(self.config_section, 'user_ids', str(self.def_user_ids))
             with open(self.config_file, "w") as file:
                 self.conf.write(file)
@@ -43,9 +46,10 @@ class Settings:
         capitalize = strtobool(self.conf[self.config_section]["capitalize"])
         allow_repeats = strtobool(self.conf[self.config_section]["allow_repeats"])
         user_mute = strtobool(self.conf[self.config_section]["user_mute"])
+        bot_token = self.conf[self.config_section]["bot_token"]
         user_ids = self.conf[self.config_section]["user_ids"].split(",")
 
-        return cmd_prefix, all_phrases, line_phrases, capitalize, allow_repeats, user_mute, user_ids
+        return cmd_prefix, all_phrases, line_phrases, capitalize, allow_repeats, user_mute, bot_token, user_ids
 
     def write_config(self, *args):
         if len(args[0]) >= 1:
@@ -62,8 +66,6 @@ class Settings:
             self.conf.set(self.config_section, 'user_mute', str(args[0][5]))
         if len(args[0]) == 7:
             self.conf.set(self.config_section, 'user_ids', str(''.join(args[0][6])))
-
-        print(args[0], args[0][0])
 
         with open(self.config_file, "w") as file:
             self.conf.write(file)
@@ -101,7 +103,6 @@ class Phrases:
             with open(self.phrases_file, "r+", encoding="utf-8") as file:
                 edited_list = []
                 for index, line in enumerate(file):
-                    print(index)
                     if line.strip() != phrase:
                         edited_list.append(line.strip()) if len(edited_list) == 0 else edited_list.append(
                             f"\n{line.strip()}")
@@ -184,14 +185,6 @@ class MaxxaGen:
         return res_str
 
 
-client = discord.Client()
-
-
-@client.event
-async def on_ready():
-    print("We have logged in as {0.user}".format(client))
-
-
 class Common:
 
     def commands(self):
@@ -214,6 +207,16 @@ class Common:
         return all_cmds, gen_cmds, parameters_cmds
 
 
+# Discord part
+
+client = discord.Client()
+
+
+@client.event
+async def on_ready():
+    print("We have logged in as {0.user}".format(client))
+
+
 @client.event
 async def on_message(message):
     # Ignore useless messages
@@ -233,13 +236,25 @@ async def on_message(message):
 
     s = Settings("config.ini")
     loaded_conf = s.read_config()
-    mute_users = loaded_conf[-2]
+    mute_users = loaded_conf[5]
     cmd_prefix = loaded_conf[0]
 
     msg_content_splitted = message.content.lower().split(",", 1)
     prefix_part = msg_content_splitted[0][0]
 
-    if len(message.content) > 1:
+    if prefix_part is cmd_prefix:
+
+        help = f"Данный бот был создан для сохранения удаленных сообщений Махмуда, чтобы была видна структура переписки." \
+               f"\nСторонние боты не позволяли этого делать, ибо под Махамада Ибрагиомва требуется " \
+               f"опредленная настройка, зная встроенный в его мозг скрипт.\n" \
+               f"Команды: (префикс: {cmd_prefix})" \
+               f"\n{cmmn_cmds[3]} - приветствие\n{cmmn_cmds[1]} - рандомная фраза из лексикона махмуда\n" \
+               f"{cmmn_cmds[0]} - извинение от ИИ махи\n" \
+               f"\nГенератор имеет настройки, которые устанавливаются через запятую, параметры: [кол-во фраз всего (int)," \
+               f" кол-во фраз в строке (int), заглавные буквы (bool), разрешение повторений (bool)]" \
+               f"\nНапример: {cmd_prefix}gen,5,5,t,t"
+
+        users_part = []
 
         # Messages duplicator
 
@@ -247,32 +262,19 @@ async def on_message(message):
             if mute_users:
                 await message.delete()
             await message.channel.send(f"```{message.content}```")
-            
-        # "Maxxa messages"
 
-        if str(message.author.id) in loaded_conf[-1] and '/play' in message.content:
-            pass
+        if len(message.content) > 1:
 
-        if str(message.author.id) in loaded_conf[-1] and 'пойоукай' in message.content:
-            await message.channel.send('йоу ' * 60)
+            # "Maxxa messages"
 
-        if str(message.author.id) in loaded_conf[-1] and " " in message.content:
-            await message.channel.send("Махмуд пошёл нахуй, читай команды долбаёб")
-            
+            if str(message.author.id) in loaded_conf[-1] and '/play' in message.content:
+                pass
 
-        if prefix_part is cmd_prefix:
-            
-            help = f"Данный бот был создан для сохранения удаленных сообщений Махмуда, чтобы была видна структура переписки." \
-            f"\nСторонние боты не позволяли этого делать, ибо под Махамада Ибрагиомва требуется " \
-            f"опредленная настройка, зная встроенный в его мозг скрипт.\n" \
-            f"Команды: (префикс: {cmd_prefix})" \
-            f"\n{cmmn_cmds[3]} - приветствие\n{cmmn_cmds[1]} - рандомная фраза из лексикона махмуда\n" \
-            f"{cmmn_cmds[0]} - извинение от ИИ махи\n" \
-            f"\nГенератор имеет настройки, которые устанавливаются через запятую, параметры: [кол-во фраз всего (int)," \
-            f" кол-во фраз в строке (int), заглавные буквы (bool), разрешение повторений (bool)]" \
-            f"\nНапример: {cmd_prefix}gen,5,5,t,t"
+            if str(message.author.id) in loaded_conf[-1] and 'пойоукай' in message.content:
+                await message.channel.send('йоу ' * 60)
 
-            users_part = []
+            if str(message.author.id) in loaded_conf[-1] and " " in message.content:
+                await message.channel.send("Махмуд пошёл нахуй, читай команды долбаёб")
 
             # Getting parameters
 
@@ -295,7 +297,7 @@ async def on_message(message):
 
             # Debug
 
-            #print(prefix_part, silent, command_part, arguments_part, users_part)
+            # print(prefix_part, silent, command_part, arguments_part, users_part)
 
             # Commands
 
@@ -309,7 +311,7 @@ async def on_message(message):
                     cap = loaded_conf[3]
                     rep = loaded_conf[4]
                     mute = loaded_conf[5]
-                    users = loaded_conf[6]
+                    users = loaded_conf[-1]
 
                     if command_part in cmmn_cmds[5]:
                         shift_pos = 1
@@ -356,11 +358,10 @@ async def on_message(message):
 
                     elif command_part in cmmn_cmds[5]:
                         new_config = [cmd_prefix, all_count, line_count, cap, rep, mute, users]
-                        print(f"users: {users}")
                         if any(ele in command_part for ele in cmmn_cmds[5]):
-                            previous_config = loaded_conf
                             s.write_config(new_config)
-                            await message.channel.send(f"{previous_config} -> {s.read_config()}")
+                            await message.channel.send(
+                                f"{loaded_conf[:6] + loaded_conf[7:]} -> {s.read_config()[:6] + s.read_config()[7:]}")
 
                     elif command_part in cmmn_cmds[6]:
                         phr_file_type = arguments_part[0]
@@ -396,9 +397,17 @@ async def on_message(message):
                     await message.channel.send(f"```{help}```")
 
                 elif any(ele in command_part for ele in cmmn_cmds[4]):
-                    msg = f"(Prefix, All Phrases, Line Phrases, Capitalize, Allow Repeats, Users Mute, Users IDs)\n{loaded_conf}"
+                    msg = f"(Prefix, All Phrases, Line Phrases, Capitalize, Allow Repeats, Users Mute, Users IDs)\n{loaded_conf[:6] + loaded_conf[7:]}"
                     await message.channel.send(msg)
 
 
 if __name__ == '__main__':
-    client.run('ODMxNjQ3OTAyNjkzOTgyMjI4.YHYSdw.pGCzGAWLbMQcibcKEcIPARliK80')
+    print("MaxxaGenerator\nVersion: 0.9 Release\nCopyright (C) 2021 EblanSoftware\nRunning...\n")
+
+    s = Settings("config.ini")
+    loaded_conf = s.read_config()
+    d_token = loaded_conf[6]
+    try:
+        client.run(d_token)
+    except discord.errors.LoginFailure:
+        print("Error!\nPlease check your bot token settings!")
