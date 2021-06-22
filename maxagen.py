@@ -411,3 +411,4 @@ if __name__ == '__main__':
         client.run(d_token)
     except discord.errors.LoginFailure:
         print("Error!\nPlease check your bot token settings!")
+        input("Press Enter to continue")
